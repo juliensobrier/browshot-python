@@ -1,0 +1,13 @@
+Browshot version 1.2.1
+================================
+
+Python module for Browshot (L<http://www.browshot.com/>), a web service to create website screenshots.
+
+
+# -- Dependencies
+
+The following python packages are required to run browshot
+
+urllib2
+simplejson
+urlparse
