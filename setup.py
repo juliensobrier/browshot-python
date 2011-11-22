@@ -12,7 +12,7 @@ setup(
 	name='Browshot',
 	version='1.2.0',
 	py_modules=['browshot'],
-	description='Client to intereact with Browshot',
+	description='Client to interact with Browshot',
     long_description=read('README'),
     url='http://www.browshot.com/api/documentation',
     license='Apache',

@@ -17,7 +17,7 @@
 #
 # Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 #
-# Browshot (http://www.browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone©, iPad©, Android©, Nook©, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
+# Browshot (http://www.browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone, iPad, Android, Nook, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
 #
 # The latest API version is detailed at http://browshot.com/api/documentation. browshot.py follows the API documentation very closely: the function names are similar to the URLs used (screenshot/create becomes screenshot_create(), instance/list becomes instance_list(), etc.), the request arguments are exactly the same, etc.
 #
@@ -29,11 +29,6 @@
 import urllib
 import urllib2
 import simplejson
-
-
-URL_SHORTEN = "http://safe.mn/api/?url=%s&format=json"
-URL_EXPAND = "http://safe.mn/api/?short_url=%s&format=json"
-URL_INFO = "http://safe.mn/api/info?url=%s&format=json"
 
 
 class BrowshotClient(object):
@@ -93,7 +88,7 @@ class BrowshotClient(object):
 			Arguments:
 				See http://browshot.com/api/documentation#browser_create for the full list of possible arguments.
  		"""
-		return self.return_reply('ibrowser/create', parameters)
+		return self.return_reply('browser/create', parameters)
 
 	def screenshot_create(self, url='', parameters={}):
 		""" Request a screenshot. See http://browshot.com/api/documentation#screenshot_create for the response format.
