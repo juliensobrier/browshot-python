@@ -9,11 +9,21 @@ The library version matches closely the API version it handles: browshot 1.0.0 i
 
 browshot can handle most the API updates within the same major version, e.g. browshot 1.0.0 should be compatible with the API 1.1 or 1.2.
 
+You can install the library from PyPI: http://pypi.python.org/pypi/Browshot
+
+The source code can be found on github at https://github.com/juliensobrier/browshot-python
+
+
+
+INSTALLATION
+
+    python setup.py install
+
 
 DEPENDENCIES
 
 The following python packages are required to run browshot
 
-urllib2
-simplejson
-urlparse
+    urllib2
+    simplejson
+    urlparse
