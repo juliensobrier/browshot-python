@@ -9,12 +9,12 @@ def read(fname):
 requirements = ['urllib2', 'simplejson', 'urllib']
 
 setup(
-	name='Browshot',
-	version='1.2.0',
-	py_modules=['browshot'],
-	description='Client to interact with Browshot',
+    name='Browshot',
+    version='1.2.1',
+    py_modules=['browshot'],
+    description='Client to interact with Browshot',
     long_description=read('README'),
-    url='http://www.browshot.com/api/documentation',
+    url='https://github.com/juliensobrier/browshot-python',
     license='Apache',
     author='Julien Sobrier',
     author_email='julien@sobrier.net',
@@ -27,7 +27,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
     ],
-	packages=find_packages(),
+    packages=find_packages(),
     namespace_packages=["browshot"],
     install_requires=requirements,
 )
