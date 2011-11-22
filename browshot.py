@@ -13,17 +13,17 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Version 1.0.0
-#
-# Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
-#
-# Browshot (http://www.browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone, iPad, Android, Nook, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
-#
-# The latest API version is detailed at http://browshot.com/api/documentation. browshot.py follows the API documentation very closely: the function names are similar to the URLs used (screenshot/create becomes screenshot_create(), instance/list becomes instance_list(), etc.), the request arguments are exactly the same, etc.
-#
-# The library version matches closely the API version it handles: browshot.py 1.0.0 is the first release for the API 1.0, browshot.py 1.1.1 is the second release for the API 1.1, etc.
-#
-# browshot.py can handle most the API updates within the same major version, e.g. browshot.py 1.0.0 should be compatible with the API 1.1 or 1.2.
+""" Version 1.2.1
+
+Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
+
+Browshot (http://www.browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone, iPad, Android, Nook, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
+
+The latest API version is detailed at http://browshot.com/api/documentation. browshot.py follows the API documentation very closely: the function names are similar to the URLs used (screenshot/create becomes screenshot_create(), instance/list becomes instance_list(), etc.), the request arguments are exactly the same, etc.
+
+The library version matches closely the API version it handles: browshot.py 1.0.0 is the first release for the API 1.0, browshot.py 1.1.1 is the second release for the API 1.1, etc.
+
+browshot.py can handle most the API updates within the same major version, e.g. browshot.py 1.0.0 should be compatible with the API 1.1 or 1.2. """
 
 
 import urllib
@@ -33,12 +33,12 @@ import simplejson
 
 class BrowshotClient(object):
 	def __init__(self, key='', base='https://api.browshot.com/api/v1/', debug=0):
-		""" Create a new WebService::Browshot object. You must pass your API key (go to you Dashboard to find your API key).
+		""" Create a new WebService::Browshot object. You must pass your API key (go to you Dashboard to find your API key, https://browshot.com/dashboard).
 		
 		Arguments:
-			key (Required):  API key.
-			base (Optional(): Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
-			debug (Optional): Set to 1 to print debug output to the standard output. 0 (disabled) by default.
+			key:  API key.
+			base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
+			debug: Set to 1 to print debug output to the standard output. 0 (disabled) by default.
 		"""
 		self.key = key
 		self.base = base
