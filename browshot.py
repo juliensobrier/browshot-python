@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.2.1
+""" Version 1.3.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -46,7 +46,7 @@ class BrowshotClient(object):
 		
 	def api_version(self):
 		""" Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-		return '1.2'
+		return '1.3'
 
 	def instance_list(self):
 		""" Return the list of instances as a dictionary. See http://browshot.com/api/documentation#instance_list for the response format. """

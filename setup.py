@@ -10,7 +10,7 @@ requirements = ['urllib2', 'simplejson', 'urllib']
 
 setup(
     name='Browshot',
-    version='1.2.1',
+    version='1.3.0',
     py_modules=['browshot'],
     description='Client to interact with Browshot',
     long_description=read('README'),

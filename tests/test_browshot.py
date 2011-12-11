@@ -30,7 +30,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
 
     def test_api_version(self):
-        self.assertEquals('1.2', self.client.api_version())
+        self.assertEquals('1.3', self.client.api_version())
 
 
     def test_instance_list(self):
@@ -178,6 +178,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
             self.assertEquals(True, 'final_url' in screenshot)
             self.assertEquals(True, 'content_type' in screenshot)
             self.assertEquals(True, 'scale' in screenshot)
+            self.assertEquals(True, 'cost' in screenshot)
 
 
     def test_screenshot_info_wrong(self):
@@ -209,6 +210,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
             self.assertEquals(True, 'final_url' in info)
             self.assertEquals(True, 'content_type' in info)
             self.assertEquals(True, 'scale' in info)
+            self.assertEquals(True, 'cost' in info)
 
 
     def test_screenshot_list(self):
@@ -240,6 +242,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
             self.assertEquals(True, 'final_url' in screenshot)
             self.assertEquals(True, 'content_type' in screenshot)
             self.assertEquals(True, 'scale' in screenshot)
+            self.assertEquals(True, 'cost' in screenshot)
 
     def test_thumbnail(self):
         pass
