@@ -1,4 +1,4 @@
-# Copyright 2011 Julien Sobrier
+# Copyright 2012 Julien Sobrier
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.3.0
+""" Version 1.4.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -27,149 +27,199 @@ browshot.py can handle most the API updates within the same major version, e.g. 
 
 
 import urllib
-import urllib2
+from urllib2 import Request, urlopen, URLError, HTTPError
 import simplejson
 
 
 class BrowshotClient(object):
-	def __init__(self, key='', base='https://api.browshot.com/api/v1/', debug=0):
-		""" Create a new WebService::Browshot object. You must pass your API key (go to you Dashboard to find your API key, https://browshot.com/dashboard).
-		
-		Arguments:
-			key:  API key.
-			base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
-			debug: Set to 1 to print debug output to the standard output. 0 (disabled) by default.
-		"""
-		self.key = key
-		self.base = base
-		self.debug = debug
-		
-	def api_version(self):
-		""" Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-		return '1.3'
+    def __init__(self, key='', base='https://api.browshot.com/api/v1/', debug=0):
+        """ Create a new WebService::Browshot object. You must pass your API key (go to you Dashboard to find your API key, https://browshot.com/dashboard).
+        
+        Arguments:
+            key:  API key.
+            base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
+            debug: Set to 1 to print debug output to the standard output. 0 (disabled) by default.
+        """
+        self.key = key
+        self.base = base
+        self.debug = debug
 
-	def instance_list(self):
-		""" Return the list of instances as a dictionary. See http://browshot.com/api/documentation#instance_list for the response format. """
-		return self.return_reply('instance/list')
+    def api_version(self):
+        """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
+        return '1.4'
 
-	
-	def instance_info(self, id=0):
-		""" Return the details of an instance. See http://browshot.com/api/documentation#instance_info for the response format.
+    def simple(self, url='', parameters={}):
+        """ Retrieve a screenshot in one function. 
+        
+            Arguments:
+            See http://browshot.com/api/documentation#simple for the full list of possible arguments.
+                url (Required): URL of the screenshot
+                
+            Returns {'code': <code>, 'png': <content>}
+                <code>: 200 if successful
+                <content>: PNG file
+        """
+        parameters.update({'url': url})
+        uri = self.make_url('simple', parameters)
+        if self.debug:
+            print uri
 
-			Arguments:
-				id (Required): Instance ID
- 		"""
-		return self.return_reply('instance/info', { 'id': id })
-	
-	def instance_create(self,parameters={}):
-		""" Create a private instance. See http://browshot.com/api/documentation#instance_create for the response format.
+        try:
+            response = urlopen(uri)
 
-			Arguments:
-				See http://browshot.com/api/documentation#instance_create for the full list of possible arguments.
- 		"""
-		return self.return_reply('instance/create', parameters)
+            return {'code': 200, 'png': response.read()}
+        except HTTPError, e:
+            return {'code': e.code, 'png': ''}
+        except Exception, e:
+            return {'code': 400, 'png': ''}
+    
+    
+    
+    def simple_file(self, url='', file='', parameters={}):
+        """ Retrieve a screenshot, or a thumbnail, and save it to a fil in one functione.
+
+        Returns {'code': <code>, 'file': <file path}
+                <code>: 200 if successful
+                <file path>: local file where the screenshot was saved, empty string it if failed
+                
+        Arguments:
+        See http://browshot.com/api/documentation#simple for the full list of possible arguments.
+            url (Required): URL of the screenshot
+            file (Required): local file to store the screenshot
+         """
+        data = self.simple(url, parameters);
+        if len(data['png']) > 0:
+            image = open(file, mode='wb')
+            image.write(data['png'])
+            image.close();
+            return {'code': data['code'], 'file': file}
+        
+        return {'code': data['code'], 'file': ''}
 
 
-	def browser_list(self):
-		""" Return the list of browsers as a hash reference. See http://browshot.com/api/documentation#browser_list for the response format. """
-		return self.return_reply('browser/list')
-	
-	def browser_info(self, id=0):
-		""" Return the details of a browser. See L<http://browshot.com/api/documentation#browser_info> for the response format.
+    def instance_list(self):
+        """ Return the list of instances as a dictionary. See http://browshot.com/api/documentation#instance_list for the response format. """
+        return self.return_reply('instance/list')
 
-			Arguments:
-				id (Required: Browser ID
-		"""
-		return self.return_reply('browser/info', { 'id': id })
-	
-	def browser_create(self,parameters={}):
-		""" Create a custom browser. See http://browshot.com/api/documentation#browser_create for the response format.
 
-			Arguments:
-				See http://browshot.com/api/documentation#browser_create for the full list of possible arguments.
- 		"""
-		return self.return_reply('browser/create', parameters)
+    def instance_info(self, id=0):
+        """ Return the details of an instance. See http://browshot.com/api/documentation#instance_info for the response format.
 
-	def screenshot_create(self, url='', parameters={}):
-		""" Request a screenshot. See http://browshot.com/api/documentation#screenshot_create for the response format.
+            Arguments:
+                id (Required): Instance ID
+         """
+        return self.return_reply('instance/info', { 'id': id })
 
-			Arguments:
-			See http://browshot.com/api/documentation#screenshot_create for the full list of possible arguments.
-				url(Required): URL of the website to create a screenshot of.
-		"""
-		parameters.update({'url': url})
-		return self.return_reply('screenshot/create', parameters)
+    def instance_create(self,parameters={}):
+        """ Create a private instance. See http://browshot.com/api/documentation#instance_create for the response format.
 
-	def screenshot_info(self, id=0):
-		""" Get information about a screenshot requested previously. See http://browshot.com/api/documentation#screenshot_info for the response format.
+            Arguments:
+                See http://browshot.com/api/documentation#instance_create for the full list of possible arguments.
+         """
+        return self.return_reply('instance/create', parameters)
 
-			Arguments:
-				id (Required): Screenshot ID.
-		"""
-		return self.return_reply('screenshot/info', { 'id': id })
 
-	def screenshot_list(self, parameters={}):
-		""" Get details about screenshot requested. See http://browshot.com/api/documentation#screenshot_list for the response format. """
-		return self.return_reply('screenshot/list', parameters)
+    def browser_list(self):
+        """ Return the list of browsers as a hash reference. See http://browshot.com/api/documentation#browser_list for the response format. """
+        return self.return_reply('browser/list')
 
-	def screenshot_thumbnail(self, url='', parameters={}):
-		""" Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#thumbnails> for the response format.
-		
-			Arguments:
-			See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
-				url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
-		"""
-		try:
-			for key, value in parameters.items():
-				url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
-			
-			response = urllib.urlopen(url)
-			
-			return response.read()
-		except Exception, e:
-			raise e
-		
-	def screenshot_thumbnail_file(self, url='', file='', parameters={}):
-		""" Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#thumbnails for the response format.
+    def browser_info(self, id=0):
+        """ Return the details of a browser. See L<http://browshot.com/api/documentation#browser_info> for the response format.
 
-		Returns the file name if successful.
+            Arguments:
+                id (Required: Browser ID
+        """
+        return self.return_reply('browser/info', { 'id': id })
 
-		Arguments:
-		See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
-			url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
- 		"""
-		content = self.screenshot_thumbnail(url, parameters);
+    def browser_create(self,parameters={}):
+        """ Create a custom browser. See http://browshot.com/api/documentation#browser_create for the response format.
 
-		image = open(file, mode='wb')
-		image.write(content)
-		image.close();
-		
-		return file
+            Arguments:
+                See http://browshot.com/api/documentation#browser_create for the full list of possible arguments.
+         """
+        return self.return_reply('browser/create', parameters)
 
-	def account_info(self, parameters={}):
-		""" Get details about the user account. See http://browshot.com/api/documentation#account_info for the response format. """
-		return self.return_reply('account/info', parameters)
+    def screenshot_create(self, url='', parameters={}):
+        """ Request a screenshot. See http://browshot.com/api/documentation#screenshot_create for the response format.
 
-	
-	def make_url(self, action='', parameters={}):
-		url = self.base + action + '?key=' + urllib.quote_plus(self.key)
-		
-		for key, value in parameters.items():
-			url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+            Arguments:
+            See http://browshot.com/api/documentation#screenshot_create for the full list of possible arguments.
+                url(Required): URL of the website to create a screenshot of.
+        """
+        parameters.update({'url': url})
+        return self.return_reply('screenshot/create', parameters)
 
-		if self.debug:
-			print url
+    def screenshot_info(self, id=0):
+        """ Get information about a screenshot requested previously. See http://browshot.com/api/documentation#screenshot_info for the response format.
 
-		return url
-		
-	def return_reply(self, action='', parameters={}):
-		try:
-			url	= self.make_url(action, parameters)
-			
-			response = urllib.urlopen(url)
-			json = response.read()
-			
-			json_decode = simplejson.loads(json)
-			return json_decode
-		except Exception, e:
-			raise e
+            Arguments:
+                id (Required): Screenshot ID.
+        """
+        return self.return_reply('screenshot/info', { 'id': id })
+
+    def screenshot_list(self, parameters={}):
+        """ Get details about screenshot requested. See http://browshot.com/api/documentation#screenshot_list for the response format. """
+        return self.return_reply('screenshot/list', parameters)
+
+    def screenshot_thumbnail(self, url='', parameters={}):
+        """ Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#thumbnails> for the response format.
+        
+            Arguments:
+            See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
+                url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
+        """
+        try:
+            for key, value in parameters.items():
+                url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+            
+            response = urllib.urlopen(url)
+            
+            return response.read()
+        except Exception, e:
+            raise e
+
+    def screenshot_thumbnail_file(self, url='', file='', parameters={}):
+        """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#thumbnails for the response format.
+
+        Returns the file name if successful.
+
+        Arguments:
+        See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
+            url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
+            file (Required): local file to store the screenshot
+         """
+        content = self.screenshot_thumbnail(url, parameters);
+
+        image = open(file, mode='wb')
+        image.write(content)
+        image.close();
+        
+        return file
+
+    def account_info(self, parameters={}):
+        """ Get details about the user account. See http://browshot.com/api/documentation#account_info for the response format. """
+        return self.return_reply('account/info', parameters)
+
+    
+    def make_url(self, action='', parameters={}):
+        url = self.base + action + '?key=' + urllib.quote_plus(self.key)
+        
+        for key, value in parameters.items():
+            url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+
+        if self.debug:
+            print url
+
+        return url
+
+    def return_reply(self, action='', parameters={}):
+        try:
+            url    = self.make_url(action, parameters)
+            
+            response = urllib.urlopen(url)
+            json = response.read()
+            
+            json_decode = simplejson.loads(json)
+            return json_decode
+        except Exception, e:
+            raise e

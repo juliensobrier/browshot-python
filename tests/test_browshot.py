@@ -27,10 +27,28 @@ from browshot import BrowshotClient
 class BrowshotClient_ParseTestCase(unittest.TestCase):
     def setUp(self):
         self.client = BrowshotClient('vPTtKKLBtPUNxVwwfEKlVvekuxHyTXyi')
+        #self.client.debug = 1
 
 
     def test_api_version(self):
-        self.assertEquals('1.3', self.client.api_version())
+        self.assertEquals('1.4', self.client.api_version())
+
+    def test_simple(self):
+        data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
+        #data = self.client.simple({'url': 'http://mobilito.net'})
+        self.assertEquals(200,  data['code'])
+        self.assertEquals(True, len(data['png']) > 0)
+        
+        # Fail
+        data = self.client.simple('http://')
+        self.assertEquals(400,  data['code'])
+        self.assertEquals('',    data['png'])
+
+
+    #def test_simple_file(self):
+        #data = self.client.simple_file('http://mobilito.net/', '/tmp/mobilito.png', {'cache': 60 * 60 * 24 * 365})
+        #self.assertEquals(200,                  data['code'])
+        #self.assertEquals('/tmp/mobilito.png',  data['file'])
 
 
     def test_instance_list(self):
