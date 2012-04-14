@@ -10,7 +10,7 @@ requirements = ['simplejson']
 
 setup(
     name='Browshot',
-    version='1.6.0',
+    version='1.7.0',
     py_modules=['browshot'],
     description='Client to interact with Browshot',
     long_description=read('README'),
