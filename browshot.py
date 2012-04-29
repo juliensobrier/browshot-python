@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.7.0
+""" Version 1.8.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -46,7 +46,7 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.7'
+        return '1.8'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function. 
@@ -162,49 +162,54 @@ class BrowshotClient(object):
         """ Get details about screenshot requested. See http://browshot.com/api/documentation#screenshot_list for the response format. """
         return self.return_reply('screenshot/list', parameters)
 
-    def screenshot_thumbnail(self, url='', parameters={}):
-        """ Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#thumbnails> for the response format.
-        
-            Arguments:
-            See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
-                url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
-        """
-        try:
-            for key, value in parameters.items():
-                url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
-            
-            response = urllib.urlopen(url)
-            
-            return response.read()
-        except Exception, e:
-            raise e
+    def screenshot_host(self, id=0, parameters={}):
+        """ Host a screenshot or a thumbnail. See L<http://browshot.com/api/documentation#screenshot_host> for the response format.
 
-    def screenshot_thumbnail_file(self, url='', file='', parameters={}):
-        """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#thumbnails for the response format.
+            Arguments:
+            See http://browshot.com/api/documentation#screenshot_host for the full list of possible arguments.
+                id (Required): screenshot ID
+        """
+        parameters.update({'id': id})
+        return self.return_reply('screenshot/host', parameters)
+
+    def screenshot_thumbnail(self, id=0, parameters={}):
+        """ Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#screenshot_thumbnail> for the response format.
+
+            Arguments:
+            See http://browshot.com/api/documentation#screenshot_thumbnail for the full list of possible arguments.
+                id (Required): screenshot ID. You will get the full image if no other argument is specified.
+        """
+        parameters.update({'id': id})
+        url = self.make_url('screenshot/thumbnail', parameters)
+        response = urllib.urlopen(url)
+        return response.read()
+
+    def screenshot_thumbnail_file(self, url='', id=0, parameters={}):
+        """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#screenshot_thumbnail for the response format.
 
         Returns the file name if successful.
 
         Arguments:
-        See http://browshot.com/api/documentation#thumbnails for the full list of possible arguments.
-            url (Required): URL of the screenshot (screenshot_url value retrieved from screenshot_create() or screenshot_info()). You will get the full image if no other argument is specified.
+        See http://browshot.com/api/documentation#screenshot_thumbnail for the full list of possible arguments.
+            id (Required): screenshot ID. You will get the full image if no other argument is specified.
             file (Required): local file to store the screenshot
          """
-        content = self.screenshot_thumbnail(url, parameters);
+        content = self.screenshot_thumbnail(id, parameters);
 
         image = open(file, mode='wb')
         image.write(content)
         image.close();
-        
+
         return file
 
     def account_info(self, parameters={}):
         """ Get details about the user account. See http://browshot.com/api/documentation#account_info for the response format. """
         return self.return_reply('account/info', parameters)
 
-    
+
     def make_url(self, action='', parameters={}):
         url = self.base + action + '?key=' + urllib.quote_plus(self.key)
-        
+
         for key, value in parameters.items():
             url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
 
@@ -216,10 +221,10 @@ class BrowshotClient(object):
     def return_reply(self, action='', parameters={}):
         try:
             url    = self.make_url(action, parameters)
-            
+
             response = urllib.urlopen(url)
             json = response.read()
-            
+
             json_decode = simplejson.loads(json)
             return json_decode
         except Exception, e:

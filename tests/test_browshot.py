@@ -26,12 +26,12 @@ from browshot import BrowshotClient
 
 class BrowshotClient_ParseTestCase(unittest.TestCase):
     def setUp(self):
-        self.client = BrowshotClient('vPTtKKLBtPUNxVwwfEKlVvekuxHyTXyi', 'http://127.0.0.1:3000/api/v1/')
+        self.client = BrowshotClient('vPTtKKLBtPUNxVwwfEKlVvekuxHyTXyi')
         #self.client.debug = 1
 
 
     def test_api_version(self):
-        self.assertEquals('1.7', self.client.api_version())
+        self.assertEquals('1.8', self.client.api_version())
 
     def test_simple(self):
         data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
@@ -390,8 +390,40 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
             self.assertEquals(True, 'scale' in screenshot)
             self.assertEquals(True, 'cost' in screenshot)
 
+
     def test_thumbnail(self):
-        pass
+        screenshots = self.client.screenshot_list()
+        self.assertEquals(True, len(screenshots.keys()) > 0)
+
+        screenshot_id = screenshots.keys()[0]
+        self.assertEquals(True, screenshot_id > 0)
+
+        thumbnail = self.client.screenshot_thumbnail(screenshot_id)
+        self.assertEquals(True, thumbnail != '')
+        self.assertEquals('PNG', thumbnail[1:4])
+
+
+    def test_hosting(self):
+        screenshots = self.client.screenshot_list()
+        self.assertEquals(True, len(screenshots.keys()) > 0)
+
+        screenshot_id = screenshots.keys()[0]
+        self.assertEquals(True, screenshot_id > 0)
+
+        hosting = self.client.screenshot_host(screenshot_id)
+        self.assertEquals('error', hosting['status'])
+
+        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 'browshot' })
+        self.assertEquals('error', hosting['status'])
+
+        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 's3' })
+        self.assertEquals('error', hosting['status'])
+
+        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 's3', 'bucket' : 'mine' })
+        self.assertEquals('error', hosting['status'])
+
+        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 'cdn' })
+        self.assertEquals('error', hosting['status'])
 
 
     def test_account_info(self):
