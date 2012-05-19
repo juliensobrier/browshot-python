@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.9.0
+""" Version 1.9.1
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -49,7 +49,9 @@ class BrowshotClient(object):
         return '1.9'
 
     def simple(self, url='', parameters={}):
-        """ Retrieve a screenshot in one function. 
+        """ Retrieve a screenshot in one function.
+
+            Note: by default, screenshots are cached for 24 hours. You can tune this valu with the cache=X parameter.
 
             Arguments:
             See http://browshot.com/api/documentation#simple for the full list of possible arguments.
@@ -77,6 +79,8 @@ class BrowshotClient(object):
 
     def simple_file(self, url='', file='', parameters={}):
         """ Retrieve a screenshot, or a thumbnail, and save it to a fil in one functione.
+
+        Note: by default, screenshots are cached for 24 hours. You can tune this valu with the cache=X parameter.
 
         Returns {'code': <code>, 'file': <file path}
                 <code>: 200 if successful
@@ -141,6 +145,8 @@ class BrowshotClient(object):
 
     def screenshot_create(self, url='', parameters={}):
         """ Request a screenshot. See http://browshot.com/api/documentation#screenshot_create for the response format.
+
+            Note: by default, screenshots are cached for 24 hours. You can tune this valu with the cache=X parameter.
 
             Arguments:
             See http://browshot.com/api/documentation#screenshot_create for the full list of possible arguments.

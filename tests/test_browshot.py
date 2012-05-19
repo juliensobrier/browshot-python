@@ -40,7 +40,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals(True, len(data['png']) > 0)
 
         # Fail
-        data = self.client.simple('http://')
+        data = self.client.simple('')
         self.assertEquals(400,  data['code'])
         self.assertEquals('',   data['png'])
 
