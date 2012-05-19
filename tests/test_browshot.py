@@ -31,14 +31,14 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
 
     def test_api_version(self):
-        self.assertEquals('1.8', self.client.api_version())
+        self.assertEquals('1.9', self.client.api_version())
 
     def test_simple(self):
         data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
         #data = self.client.simple({'url': 'http://mobilito.net'})
         self.assertEquals(200,  data['code'])
         self.assertEquals(True, len(data['png']) > 0)
-        
+
         # Fail
         data = self.client.simple('http://')
         self.assertEquals(400,  data['code'])
@@ -401,6 +401,11 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         thumbnail = self.client.screenshot_thumbnail(screenshot_id)
         self.assertEquals(True, thumbnail != '')
         self.assertEquals('PNG', thumbnail[1:4])
+
+
+    def test_screenshot_share(self):
+        share = self.client.screenshot_host(0)
+        self.assertEquals('error', share['status'])
 
 
     def test_hosting(self):

@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.8.0
+""" Version 1.9.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -34,7 +34,7 @@ import simplejson
 class BrowshotClient(object):
     def __init__(self, key='', base='https://api.browshot.com/api/v1/', debug=0):
         """ Create a new WebService::Browshot object. You must pass your API key (go to you Dashboard to find your API key, https://browshot.com/dashboard).
-        
+
         Arguments:
             key:  API key.
             base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
@@ -46,15 +46,15 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.8'
+        return '1.9'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function. 
-        
+
             Arguments:
             See http://browshot.com/api/documentation#simple for the full list of possible arguments.
                 url (Required): URL of the screenshot
-                
+
             Returns {'code': <code>, 'png': <content>}
                 <code>: 200 if successful
                 <content>: PNG file
@@ -72,16 +72,16 @@ class BrowshotClient(object):
             return {'code': e.code, 'png': ''}
         except Exception, e:
             return {'code': 400, 'png': ''}
-    
-    
-    
+
+
+
     def simple_file(self, url='', file='', parameters={}):
         """ Retrieve a screenshot, or a thumbnail, and save it to a fil in one functione.
 
         Returns {'code': <code>, 'file': <file path}
                 <code>: 200 if successful
                 <file path>: local file where the screenshot was saved, empty string it if failed
-                
+
         Arguments:
         See http://browshot.com/api/documentation#simple for the full list of possible arguments.
             url (Required): URL of the screenshot
@@ -93,7 +93,7 @@ class BrowshotClient(object):
             image.write(data['png'])
             image.close();
             return {'code': data['code'], 'file': file}
-        
+
         return {'code': data['code'], 'file': ''}
 
 
@@ -171,6 +171,16 @@ class BrowshotClient(object):
         """
         parameters.update({'id': id})
         return self.return_reply('screenshot/host', parameters)
+
+    def screenshot_share(self, id=0, parameters={}):
+        """ Share a screenshot. See L<http://browshot.com/api/documentation#screenshot_share> for the response format.
+
+            Arguments:
+            See http://browshot.com/api/documentation#screenshot_share for the full list of possible arguments.
+                id (Required): screenshot ID
+        """
+        parameters.update({'id': id})
+        return self.return_reply('screenshot/share', parameters)
 
     def screenshot_thumbnail(self, id=0, parameters={}):
         """ Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#screenshot_thumbnail> for the response format.
