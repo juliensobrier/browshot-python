@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.9.1
+""" Version 1.10.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -46,7 +46,7 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.9'
+        return '1.10'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function.
@@ -187,6 +187,16 @@ class BrowshotClient(object):
         """
         parameters.update({'id': id})
         return self.return_reply('screenshot/share', parameters)
+
+    def screenshot_delete(self, id=0, parameters={}):
+        """ Deleet details of a screenshot. See L<http://browshot.com/api/documentation#screenshot_delete> for the response format.
+
+            Arguments:
+            See http://browshot.com/api/documentation#screenshot_delete for the full list of possible arguments.
+                id (Required): screenshot ID
+        """
+        parameters.update({'id': id})
+        return self.return_reply('screenshot/delete', parameters)
 
     def screenshot_thumbnail(self, id=0, parameters={}):
         """ Retrieve the screenshot, or a thumbnail. See L<http://browshot.com/api/documentation#screenshot_thumbnail> for the response format.

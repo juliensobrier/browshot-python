@@ -31,7 +31,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
 
     def test_api_version(self):
-        self.assertEquals('1.9', self.client.api_version())
+        self.assertEquals('1.10', self.client.api_version())
 
     def test_simple(self):
         data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
