@@ -31,7 +31,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
 
     def test_api_version(self):
-        self.assertEquals('1.10', self.client.api_version())
+        self.assertEquals('1.12', self.client.api_version())
 
     def test_simple(self):
         data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
@@ -326,37 +326,37 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
             self.assertEquals(False, 'scripts' in info)
             self.assertEquals(False, 'iframes' in info)
 
-    def test_screenshot_info_3(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-        info  = self.client.screenshot_info(screenshot['id'], { 'details' :  3 })
+    #def test_screenshot_info_3(self):
+        #screenshot = self.client.screenshot_create('http://browshot.com/')
+        #info  = self.client.screenshot_info(screenshot['id'], { 'details' :  3 })
 
-        self.assertEquals(True, 'id' in info)
-        self.assertEquals(True, 'status' in info)
-        self.assertEquals(True, 'priority' in info)
+        #self.assertEquals(True, 'id' in info)
+        #self.assertEquals(True, 'status' in info)
+        #self.assertEquals(True, 'priority' in info)
 
-        if info['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in info)
-            self.assertEquals(True, 'url' in info)
-            self.assertEquals(True, 'size' in info)
-            self.assertEquals(True, 'width' in info)
-            self.assertEquals(True, 'height' in info)
-            self.assertEquals(True, 'instance_id' in info)
-            self.assertEquals(True, 'final_url' in info)
-            self.assertEquals(True, 'scale' in info)
-            self.assertEquals(True, 'cost' in info)
+        #if info['status'] == 'finished':
+            #self.assertEquals(True, 'screenshot_url' in info)
+            #self.assertEquals(True, 'url' in info)
+            #self.assertEquals(True, 'size' in info)
+            #self.assertEquals(True, 'width' in info)
+            #self.assertEquals(True, 'height' in info)
+            #self.assertEquals(True, 'instance_id' in info)
+            #self.assertEquals(True, 'final_url' in info)
+            #self.assertEquals(True, 'scale' in info)
+            #self.assertEquals(True, 'cost' in info)
 
-            self.assertEquals(True, 'response_code' in info)
-            self.assertEquals(True, 'content_type' in info)
+            #self.assertEquals(True, 'response_code' in info)
+            #self.assertEquals(True, 'content_type' in info)
 
-            self.assertEquals(True, 'started' in info)
-            self.assertEquals(True, 'finished' in info)
-            self.assertEquals(True, 'load' in info)
-            self.assertEquals(True, 'request_time' in info)
-            self.assertEquals(True, 'content' in info)
+            #self.assertEquals(True, 'started' in info)
+            #self.assertEquals(True, 'finished' in info)
+            #self.assertEquals(True, 'load' in info)
+            #self.assertEquals(True, 'request_time' in info)
+            #self.assertEquals(True, 'content' in info)
 
-            self.assertEquals(True, 'images' in info)
-            self.assertEquals(True, 'scripts' in info)
-            self.assertEquals(True, 'iframes' in info)
+            #self.assertEquals(True, 'images' in info)
+            #self.assertEquals(True, 'scripts' in info)
+            #self.assertEquals(True, 'iframes' in info)
 
 
     def test_screenshot_list(self):
@@ -407,6 +407,36 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         share = self.client.screenshot_host(0)
         self.assertEquals('error', share['status'])
 
+    def test_screenshot_search(self):
+        screenshots = self.client.screenshot_search('google.com')
+        self.assertEquals(True, len(screenshots.keys()) > 0)
+
+        screenshot_id = screenshots.keys()[0]
+        self.assertEquals(True, screenshot_id > 0)
+
+        screenshot = screenshots[screenshot_id]
+		
+        self.assertEquals(True, 'id' in screenshot)
+        self.assertEquals(True, 'status' in screenshot)
+        self.assertEquals(True, 'priority' in screenshot)
+
+        if screenshot['status'] == 'finished':
+            self.assertEquals(True, 'screenshot_url' in screenshot)
+            self.assertEquals(True, 'url' in screenshot)
+            self.assertEquals(True, 'size' in screenshot)
+            self.assertEquals(True, 'width' in screenshot)
+            self.assertEquals(True, 'height' in screenshot)
+            self.assertEquals(True, 'request_time' in screenshot)
+            self.assertEquals(True, 'started' in screenshot)
+            self.assertEquals(True, 'load' in screenshot)
+            self.assertEquals(True, 'content' in screenshot)
+            self.assertEquals(True, 'finished' in screenshot)
+            self.assertEquals(True, 'instance_id' in screenshot)
+            self.assertEquals(True, 'response_code' in screenshot)
+            self.assertEquals(True, 'final_url' in screenshot)
+            self.assertEquals(True, 'content_type' in screenshot)
+            self.assertEquals(True, 'scale' in screenshot)
+            self.assertEquals(True, 'cost' in screenshot)
 
     def test_hosting(self):
         screenshots = self.client.screenshot_list()
@@ -438,10 +468,11 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals(0,  int(account['balance']))
         self.assertEquals(True, 'active' in account)
         self.assertEquals(1,  int(account['active']))
-        self.assertEquals(True, 'instances' in account)
+        #self.assertEquals(True, 'instances' in account)
 
     def test_account_info_wrong(self):
         client = BrowshotClient()
+        #client.debug = True
         account = client.account_info()
 
         self.assertEquals(True, 'error' in account)

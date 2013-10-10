@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 
@@ -10,7 +11,7 @@ requirements = ['simplejson']
 
 setup(
     name='Browshot',
-    version='1.9.1',
+    version='1.12.1',
     py_modules=['browshot'],
     description='Client to interact with Browshot',
     long_description=read('README'),
