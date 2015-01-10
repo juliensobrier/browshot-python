@@ -1,4 +1,4 @@
-Browshot version 1.12.1
+Browshot version 1.14.0
 ================================
 
 Browshot (http://www.browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone, iPad, Android, Nook, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
@@ -27,3 +27,4 @@ The following python packages are required to run browshot
     urllib2
     simplejson
     urlparse
+    requests

@@ -31,7 +31,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
 
     def test_api_version(self):
-        self.assertEquals('1.12', self.client.api_version())
+        self.assertEquals('1.14', self.client.api_version())
 
     def test_simple(self):
         data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
@@ -61,7 +61,7 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals(True, len(instances['shared']) > 0)
 
         self.assertEquals(True, 'private' in instances)
-        self.assertEquals(0,    len(instances['private']))
+        self.assertEquals(1,    len(instances['private']))
 
         free = instances['free'][0]
         self.assertEquals(True, 'id' in free)
@@ -87,14 +87,14 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals(free['id'], instance['id'])
         self.assertEquals(free['width'], instance['width'])
         self.assertEquals(free['height'], instance['height'])
-        self.assertEquals(free['load'], instance['load'])
+        #self.assertEquals(free['load'], instance['load']) # can change
         self.assertEquals(free['browser']['id'], instance['browser']['id'])
         self.assertEquals(free['browser']['name'], instance['browser']['name'])
         self.assertEquals(free['browser']['javascript'], instance['browser']['javascript'])
         self.assertEquals(free['browser']['flash'], instance['browser']['flash'])
-        self.assertEquals(free['browser']['mobile'], instance['browser']['mobile'])
+        self.assertEquals(int(free['browser']['mobile']), int(instance['browser']['mobile']))
         self.assertEquals(free['type'], instance['type'])
-        self.assertEquals(free['screenshot_cost'], instance['screenshot_cost'])
+        self.assertEquals(int(free['screenshot_cost']), int(instance['screenshot_cost']))
 
 
     def test_instance_info_wrong(self):
@@ -102,28 +102,6 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
 
         self.assertEquals(True, 'error' in instance)
         self.assertEquals(True, 'status' in instance)
-
-
-    def test_instance_create_wrong(self):
-        instance = self.client.instance_create({'width': 3000})
-        self.assertEquals(True, 'error' in instance)
-
-        instance = self.client.instance_create({'height': 3000})
-        self.assertEquals(True, 'error' in instance)
-
-        instance = self.client.instance_create({'browser_id': -1})
-        self.assertEquals(True, 'error' in instance)
-
-	# Option disabled for most accounts
-    def test_instance_create(self):
-        instance = self.client.instance_create()
-        self.assertEquals(True, 'error' in instance)
-        #self.assertEquals(True, 'id' in instance)
-        #self.assertEquals(True, 'width' in instance)
-        #self.assertEquals(True, 'height' in instance)
-        #self.assertEquals(1,    int(instance['active']))
-        #self.assertEquals(True, 'browser' in instance)
-        #self.assertEquals(True, 'id' in instance['browser'])
 
 
     def test_browser_list(self):
@@ -146,22 +124,6 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals(True, 'mobile' in browser)
         self.assertEquals(True, 'flash' in browser)
 
-
-	# Option disabled for most accounts
-    def test_browser_create(self):
-        browser = self.client.browser_create({'mobile': 1, 'flash': 1, 'user_agent': 'test'});
-        self.assertEquals(True, 'error' in browser)
-        #self.assertEquals(True, 'name' in browser)
-        #self.assertEquals(True, 'user_agent' in browser)
-        #self.assertEquals(True, 'appname' in browser)
-        #self.assertEquals(True, 'vendorsub' in browser)
-        #self.assertEquals(True, 'appcodename' in browser)
-        #self.assertEquals(True, 'platform' in browser)
-        #self.assertEquals(True, 'vendor' in browser)
-        #self.assertEquals(True, 'appversion' in browser)
-        #self.assertEquals(True, 'javascript' in browser)
-        #self.assertEquals(True, 'mobile' in browser)
-        #self.assertEquals(True, 'flash' in browser)
 
     def test_screenshot_create_wrong(self):
         screenshot = self.client.screenshot_create()
@@ -455,9 +417,6 @@ class BrowshotClient_ParseTestCase(unittest.TestCase):
         self.assertEquals('error', hosting['status'])
 
         hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 's3', 'bucket' : 'mine' })
-        self.assertEquals('error', hosting['status'])
-
-        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 'cdn' })
         self.assertEquals('error', hosting['status'])
 
 
