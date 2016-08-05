@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.14.0
+""" Version 1.16.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -34,13 +34,13 @@ import requests
 
 
 class BrowshotClient(object):
-    def __init__(self, key='', base='https://api.browshot.com/api/v1/', debug=0):
+    def __init__(self, key='', debug=0, base='https://api.browshot.com/api/v1/'):
         """ Create a new BrowshotClient object. You must pass your API key (go to you Dashboard to find your API key, https://browshot.com/dashboard).
 
         Arguments:
             key:  API key.
-            base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
             debug: Set to 1 to print debug output to the standard output. 0 (disabled) by default.
+            base: Base URL for all API requests. You should use the default base provided by the library. Be careful if you decide to use HTTP instead of HTTPS as your API key could be sniffed and your account could be used without your consent.
         """
         self.key = key
         self.base = base
@@ -48,7 +48,7 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.14'
+        return '1.16'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function.
@@ -207,7 +207,7 @@ class BrowshotClient(object):
         response = urllib.urlopen(url)
         return response.read()
 
-    def screenshot_thumbnail_file(self, url='', id=0, parameters={}):
+    def screenshot_thumbnail_file(self, id=0, file='', parameters={}):
         """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#screenshot_thumbnail for the response format.
 
         Returns the file name if successful.
@@ -236,14 +236,12 @@ class BrowshotClient(object):
         return self.return_reply_string('screenshot/html', parameters)
 
 
-    def screenshot_multiple(self, id=0, parameters={}):
+    def screenshot_multiple(self, parameters={}):
         """ Request multiple screenshots. See https://browshot.com/api/documentation#screenshot_multiple for the response format.
 
             Arguments:
             See https://browshot.com/api/documentation#screenshot_multiple for the full list of possible arguments.
-                id (Required): screenshot ID
         """
-        parameters.update({'id': id})
         return self.return_reply('screenshot/multiple', parameters)
 
 
@@ -277,7 +275,14 @@ class BrowshotClient(object):
         url = self.base + action + '?key=' + urllib.quote_plus(self.key)
 
         for key, value in parameters.items():
-            url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+            if key == 'urls':
+              for uri in value:
+                url += '&url=' + urllib.quote_plus(str(uri))
+            elif key == 'instances':
+              for instance_id in value:
+                url += '&instance_id=' + urllib.quote_plus(str(instance_id))
+            else:
+              url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
 
         if self.debug:
             print url
@@ -316,9 +321,9 @@ class BrowshotClient(object):
             raise e
 
 
-    def return_reply_post_string(self, action='', parameters={}):
+    def return_reply_post_string(self, action='', file='', parameters={}):
         try:
-            url    = self.make_url(action, parameters)
+            url = self.make_url(action, parameters)
 
             if file == '':
               response = urllib.urlopen(url)
@@ -330,3 +335,7 @@ class BrowshotClient(object):
 
         except Exception, e:
             raise e
+
+
+if __name__ == "__main__":
+    client = BrowshotClient()
