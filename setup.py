@@ -11,7 +11,7 @@ requirements = ['simplejson', 'requests']
 
 setup(
     name='Browshot',
-    version='1.21.0',
+    version='1.21.1',
     py_modules=['browshot'],
     description='Client to interact with Browshot',
     long_description=read('README'),
@@ -28,8 +28,8 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
     ],
-    packages=find_packages(),
-    namespace_packages=["browshot"],
+    packages=find_packages(exclude=('tests')),
+#    namespace_packages=["browshot"],
     install_requires=requirements,
     test_suite = 'tests',
 )
