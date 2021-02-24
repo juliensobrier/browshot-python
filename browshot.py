@@ -28,7 +28,9 @@ browshot.py can handle most the API updates within the same major version, e.g. 
 
 
 import urllib
-from urllib2 import Request, urlopen, URLError, HTTPError
+from requests import Request
+from requests.exceptions import InvalidURL, HTTPError
+from requests.utils import requote_uri
 import simplejson
 import requests
 
@@ -66,15 +68,15 @@ class BrowshotClient(object):
         parameters.update({'url': url})
         uri = self.make_url('simple', parameters)
         if self.debug:
-            print uri
+            print(uri)
 
         try:
-            response = urlopen(uri)
+            response = requests.get(uri)
 
-            return {'code': 200, 'png': response.read()}
-        except HTTPError, e:
+            return {'code': 200, 'png': response.content}
+        except HTTPError as e:
             return {'code': e.code, 'png': ''}
-        except Exception, e:
+        except Exception as e:
             return {'code': 400, 'png': ''}
 
 
@@ -204,8 +206,8 @@ class BrowshotClient(object):
         """
         parameters.update({'id': id})
         url = self.make_url('screenshot/thumbnail', parameters)
-        response = urllib.urlopen(url)
-        return response.read()
+        response = requests.get(url)
+        return response.content
 
     def screenshot_thumbnail_file(self, id=0, file='', parameters={}):
         """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#screenshot_thumbnail for the response format.
@@ -272,20 +274,20 @@ class BrowshotClient(object):
 
 
     def make_url(self, action='', parameters={}):
-        url = self.base + action + '?key=' + urllib.quote_plus(self.key)
+        url = self.base + action + '?key=' + requote_uri(self.key)
 
         for key, value in parameters.items():
             if key == 'urls':
               for uri in value:
-                url += '&url=' + urllib.quote_plus(str(uri))
+                url += '&url=' + requote_uri(str(uri))
             elif key == 'instances':
               for instance_id in value:
-                url += '&instance_id=' + urllib.quote_plus(str(instance_id))
+                url += '&instance_id=' + requote_uri(str(instance_id))
             else:
-              url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+              url += '&' + requote_uri(key) + '=' + requote_uri(str(value))
 
         if self.debug:
-            print url
+            print(url)
 
         return url
 
@@ -296,7 +298,7 @@ class BrowshotClient(object):
         try:
             json_decode = simplejson.loads(content)
             return json_decode
-        except Exception, e:
+        except Exception as e:
             raise e
 
 
@@ -304,9 +306,9 @@ class BrowshotClient(object):
         try:
             url    = self.make_url(action, parameters)
 
-            response = urllib.urlopen(url)
-            return response.read()
-        except Exception, e:
+            response = requests.get(url)
+            return response.text
+        except Exception as e:
             raise e
 
 
@@ -317,7 +319,7 @@ class BrowshotClient(object):
         try:
             json_decode = simplejson.loads(content)
             return json_decode
-        except Exception, e:
+        except Exception as e:
             raise e
 
 
@@ -326,14 +328,14 @@ class BrowshotClient(object):
             url = self.make_url(action, parameters)
 
             if file == '':
-              response = urllib.urlopen(url)
-              return response.read()
+              response = requests.get(url)
+              return response.json()
 
             else:
               response = requests.post(url, files={'file': open(file,'rb')})
               return response.content
 
-        except Exception, e:
+        except Exception as e:
             raise e
 
 
