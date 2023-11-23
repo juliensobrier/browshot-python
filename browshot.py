@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.21.0
+""" Version 1.29.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -48,7 +48,7 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.21'
+        return '1.29'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function.
@@ -246,17 +246,17 @@ class BrowshotClient(object):
 
 
     def batch_create(self, file='', parameters={}):
-        """ Request multiple screenshots. See https://browshot.com/api/documentation#screenshot_multiple for the response format.
+        """ Request multiple screenshots from a file. See https://browshot.com/api/documentation#batch_create for the response format.
 
             Arguments:
             See https://browshot.com/api/documentation#batch_create for the full list of possible arguments.
-                id (Required): batch ID
+                file (Required): file with hhe list of URLs to capture
         """
         return self.return_post_reply('batch/create', file, parameters)
 
 
     def batch_info(self, id=0, parameters={}):
-        """ Request multiple screenshots. See https://browshot.com/api/documentation#screenshot_multiple for the response format.
+        """ Check the status of a batch. See https://browshot.com/api/documentation#batch_info for the response format.
 
             Arguments:
             See https://browshot.com/api/documentation#batch_info for the full list of possible arguments.
@@ -264,6 +264,30 @@ class BrowshotClient(object):
         """
         parameters.update({'id': id})
         return self.return_reply('batch/info', parameters)
+
+
+    def crawl_create(self, domain='', url='', parameters={}):
+        """ Crawl a domain. See https://browshot.com/api/documentation#crawl_create for the response format.
+
+            Arguments:
+            See https://browshot.com/api/documentation#crawl_create for the full list of possible arguments.
+                domain (Required): domain to crawl
+                url (Required): URL to start with
+        """
+        parameters.update({'url': url})
+        parameters.update({'domain': domain})
+        return self.return_reply('crawl/create', parameters)
+
+
+    def crawl_info(self, id=0, parameters={}):
+        """ Request multiple screenshots. See https://browshot.com/api/documentation#crawl_info for the response format.
+
+            Arguments:
+            See https://browshot.com/api/documentation#crawl_info for the full list of possible arguments.
+                id (Required): crawl ID
+        """
+        parameters.update({'id': id})
+        return self.return_reply('crawl/info', parameters)
 
 
     def account_info(self, parameters={}):
