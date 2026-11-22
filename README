@@ -1,4 +1,4 @@
-Browshot version 1.29.0
+Browshot version 1.32.0
 ================================
 
 Browshot (https://browshot.com/) is a web service to easily make screenshots of web pages in any screen size, as any device: iPhone, iPad, Android, PC, etc. Browshot has full Flash, JavaScript, CSS, & HTML5 support.
@@ -28,3 +28,68 @@ REQUIREMENTS
 TESTS
 
     python3 -m unittest discover -s tests -p '*_test.py'
+
+LIVE TESTS
+
+    Set BROWSHOT_API_KEY to enable read-only checks with your account.
+    Set BROWSHOT_SCREENSHOT_ID to a finished capture and BROWSHOT_RETINA_ID to
+    a finished capture with retina and ad blocking. For artifact checks, set
+    BROWSHOT_PDF_ID, BROWSHOT_WEBM_ID, BROWSHOT_MP4_ID, and BROWSHOT_GIF_ID to
+    owned, finished captures of each format.
+
+API 1.32
+
+    from browshot import BrowshotClient
+    import os
+
+    client = BrowshotClient(os.environ['BROWSHOT_API_KEY'])
+    capture = client.screenshot_create('https://example.com/', {
+        'instance_id': 373,
+        'pdf': 1,
+        'pdf_format': 'a4',
+        'pdf_margin': '10mm',
+        'device_scale': 2,
+        'hide_ads': 1,
+    })
+
+Poll screenshot_info(capture['id']) until status is 'finished'. Download with
+screenshot_pdf(capture['id']) or save with
+screenshot_pdf_file(capture['id'], 'example.pdf').
+
+PDF settings include pdf_format (letter, a4, or legal), pdf_background,
+pdf_landscape, pdf_one_page, pdf_margin, and the per-side pdf_margin_top,
+pdf_margin_bottom, pdf_margin_left, and pdf_margin_right.
+
+Request a short video or animated GIF with the same capture method.
+
+    recording = client.screenshot_create('https://example.com/', {
+        'instance_id': 373,
+        'video': 1,
+        'video_format': 'gif',
+        'video_duration': 5,
+        'video_scale': 0.5,
+    })
+
+After the capture finishes, use screenshot_video(recording['id']) to get the
+bytes or screenshot_video_file(recording['id'], 'example.gif') to save them.
+Accepted formats are webm (default), mp4, and gif. Set video_duration to 1–30
+seconds, video_quality to 0–63, video_fps to 1–30, and video_scale to 0.1–1.
+GIF uses 20 fps. An MP4 request can produce WebM where MP4 encoding is unavailable.
+
+The download methods return bytes or b'' on failure. File helpers use the
+supplied path in an existing directory and return that path, or '' on failure.
+Downloads preserve the returned bytes.
+
+Choose a capture country through instance_id. The IDs below are in order
+Chrome, Firefox, iPhone 12, and Samsung S20.
+
+    France          373  374  375  376
+    India           377  378  379  380
+    Finland         381  382  383  384
+    United Kingdom  385  386  387  388
+
+Each new instance costs one credit before options. PDF adds one credit per
+capture. Recording adds one credit per started five seconds of requested
+duration. Both require a paid Chrome-based instance, and video requires
+device_scale=1. Retina (device_scale=2), ad blocking (hide_ads=1), and downloads
+add no credits.

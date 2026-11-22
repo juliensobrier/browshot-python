@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-""" Version 1.29.0
+""" Version 1.32.0
 
 Python module for Browshot (http://www.browshot.com/), a web service to create website screenshots.
 
@@ -27,8 +27,11 @@ The library version matches closely the API version it handles: browshot.py 1.0.
 browshot.py can handle most the API updates within the same major version, e.g. browshot.py 1.0.0 should be compatible with the API 1.1 or 1.2. """
 
 
+from http.client import HTTPException
 import json
-from urllib.error import HTTPError
+from os import PathLike
+import re
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 
@@ -50,7 +53,7 @@ class BrowshotClient(object):
 
     def api_version(self):
         """ Return the API version handled by the library. Note that this library can usually handle new arguments in requests without requiring an update. """
-        return '1.29'
+        return '1.32'
 
     def simple(self, url='', parameters={}):
         """ Retrieve a screenshot in one function.
@@ -230,6 +233,28 @@ class BrowshotClient(object):
         return self.return_reply_string('screenshot/html', parameters)
 
 
+    def screenshot_pdf(self, id=0, parameters=None):
+        """Return the PDF bytes for a finished capture, or b'' on failure."""
+        return self._screenshot_artifact('pdf', id, parameters, ('application/pdf',))
+
+    def screenshot_pdf_file(self, id=0, file='', parameters=None):
+        """Save a PDF and return its file path, or '' on failure."""
+        return self._save_artifact(self.screenshot_pdf, id, file, parameters)
+
+    def screenshot_video(self, id=0, parameters=None):
+        """Return a finished capture's WebM, MP4 or GIF bytes, or b'' on failure."""
+        return self._screenshot_artifact(
+            'video', id, parameters, ('video/webm', 'video/mp4', 'image/gif')
+        )
+
+    def screenshot_video_file(self, id=0, file='', parameters=None):
+        """Save a recording using the supplied path, or return '' on failure.
+
+        An MP4 request can produce WebM. The file name stays as supplied.
+        """
+        return self._save_artifact(self.screenshot_video, id, file, parameters)
+
+
     def screenshot_multiple(self, parameters={}):
         """ Request multiple screenshots. See https://browshot.com/api/documentation#screenshot_multiple for the response format.
 
@@ -286,6 +311,39 @@ class BrowshotClient(object):
     def account_info(self, parameters={}):
         """ Get details about the user account. See https://browshot.com/api/documentation#account_info for the response format. """
         return self.return_reply('account/info', parameters)
+
+
+    def _screenshot_artifact(self, kind, id, parameters, content_types):
+        if not re.fullmatch(r'[1-9][0-9]{0,18}', str(id)):
+            return b''
+
+        query = dict(parameters or {}, id=id)
+        url = self.make_url('screenshot/' + kind, query)
+        try:
+            with urlopen(url, timeout=60) as response:
+                if response.status != 200 or response.headers.get_content_type() not in content_types:
+                    return b''
+                return response.read()
+        except HTTPError as error:
+            error.close()
+            return b''
+        except (URLError, HTTPException, OSError):
+            return b''
+
+    def _save_artifact(self, download, id, file, parameters):
+        if not file or not isinstance(file, (str, bytes, PathLike)):
+            return ''
+
+        content = download(id, parameters)
+        if not content:
+            return ''
+
+        try:
+            with open(file, 'wb') as artifact:
+                artifact.write(content)
+        except (OSError, ValueError):
+            return ''
+        return file
 
 
     def make_url(self, action='', parameters={}):
