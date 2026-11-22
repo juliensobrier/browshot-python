@@ -17,14 +17,14 @@ The source code can be found on github at https://github.com/juliensobrier/brows
 
 INSTALLATION
 
-    python setup.py install
+    python3 -m pip install .
 
 
-DEPENDENCIES
+REQUIREMENTS
 
-The following python packages are required to run browshot
+    Python 3.9 or newer
+    requests (installed automatically by pip)
 
-    urllib2
-    simplejson
-    urlparse
-    requests
+TESTS
+
+    python3 -m unittest discover -s tests -p '*_test.py'

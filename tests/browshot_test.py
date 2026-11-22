@@ -1,443 +1,181 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# Copyright (c) Julien Sobrier
-#
-# This file is part of printio released under MIT license.
-# See the LICENSE for more information.
-"""
-
-Test the library.
-
-"""
-
-import os
-import sys
+from contextlib import redirect_stdout
+from io import StringIO
+import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from threading import Thread
 import unittest
-#import datetime
-
-libpath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not libpath in sys.path:
-    sys.path.insert(1, libpath)
-    print libpath
-del libpath
+from urllib.parse import parse_qs, urlsplit
 
 from browshot import BrowshotClient
 
 
+IMAGE = b'\x89PNG\r\n\x1a\n\x00\x80\xff'
 
-class BrowshotClient_ParseTestCase(unittest.TestCase):
+
+class StubHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        self.reply()
+
+    def do_POST(self):
+        self.reply()
+
+    def reply(self):
+        request = urlsplit(self.path)
+        query = parse_qs(request.query, keep_blank_values=True)
+        body = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+        status = int(query.get('stub_status', ['200'])[0])
+        if status != 200:
+            self.send_body(status, 'application/json', b'{"error":"INVALID_REQUEST"}')
+        elif request.path.endswith(('/simple', '/thumbnail')):
+            self.send_body(200, 'image/png', IMAGE)
+        elif request.path.endswith('/html'):
+            self.send_body(200, 'text/html', b'<html>Example</html>')
+        else:
+            response = {
+                'method': self.command,
+                'path': request.path,
+                'query': query,
+                'upload': 'https://example.com/' in body.decode('utf-8') if body else False,
+                'upload_content_type': self.headers.get('Content-Type', ''),
+            }
+            self.send_body(200, 'application/json', json.dumps(response).encode('utf-8'))
+
+    def send_body(self, status, content_type, body):
+        self.send_response(status)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+class BrowshotClientTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadingHTTPServer(('127.0.0.1', 0), StubHandler)
+        cls.thread = Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = 'http://127.0.0.1:{}/api/v1/'.format(cls.server.server_port)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join()
+
     def setUp(self):
-        self.client = BrowshotClient('vPTtKKLBtPUNxVwwfEKlVvekuxHyTXyi')
-        #self.client.debug = 1
-
+        self.client = BrowshotClient('key & value', 0, self.base)
 
     def test_api_version(self):
-        self.assertEquals('1.29', self.client.api_version())
+        self.assertEqual('1.29', self.client.api_version())
+
+    def test_catalog_and_account_endpoints(self):
+        for path, call in (
+            ('account/info', self.client.account_info),
+            ('instance/list', self.client.instance_list),
+            ('browser/list', self.client.browser_list),
+            ('instance/info', lambda: self.client.instance_info(12)),
+            ('browser/info', lambda: self.client.browser_info(16)),
+        ):
+            with self.subTest(path=path):
+                response = call()
+                self.assertEqual('/api/v1/' + path, response['path'])
+                self.assertEqual(['key & value'], response['query']['key'])
+                if path in ('instance/info', 'browser/info'):
+                    self.assertEqual(['12' if path.startswith('instance') else '16'], response['query']['id'])
+
+    def test_screenshot_endpoints(self):
+        for path, call in (
+            ('info', self.client.screenshot_info),
+            ('host', self.client.screenshot_host),
+            ('share', self.client.screenshot_share),
+            ('delete', self.client.screenshot_delete),
+        ):
+            with self.subTest(path=path):
+                parameters = {'id': 1, 'details': 2}
+                response = call(77, parameters)
+                self.assertEqual('/api/v1/screenshot/' + path, response['path'])
+                self.assertEqual(['77'], response['query']['id'])
+                self.assertEqual(['2'], response['query']['details'])
+                self.assertEqual({'id': 1, 'details': 2}, parameters)
+
+        listing = self.client.screenshot_list({'limit': 12})
+        self.assertEqual('/api/v1/screenshot/list', listing['path'])
+        self.assertEqual(['12'], listing['query']['limit'])
+        search = self.client.screenshot_search('example.com/?a=1&b=2')
+        self.assertEqual('/api/v1/screenshot/search', search['path'])
+        self.assertEqual(['example.com/?a=1&b=2'], search['query']['url'])
+
+    def test_create_encodes_unicode_and_preserves_arguments(self):
+        options = {'instance_id': 12, 'cookie': 'scale=é & size=10'}
+        url = 'https://example.com/?name=é'
+        response = self.client.screenshot_create(url, options)
+        self.assertEqual('/api/v1/screenshot/create', response['path'])
+        self.assertEqual([url], response['query']['url'])
+        self.assertEqual(['scale=é & size=10'], response['query']['cookie'])
+        self.assertNotIn('url', options)
+
+    def test_multiple_preserves_repeated_url_and_instance_parameters(self):
+        urls = ['https://example.com/', 'https://example.net/?a=1&b=2']
+        response = self.client.screenshot_multiple({'urls': urls, 'instances': [12, 65]})
+        self.assertEqual('/api/v1/screenshot/multiple', response['path'])
+        self.assertEqual(urls, response['query']['url'])
+        self.assertEqual(['12', '65'], response['query']['instance_id'])
+
+    def test_crawl_and_batch_metadata(self):
+        response = self.client.crawl_create('example.com', 'https://example.com/')
+        self.assertEqual('/api/v1/crawl/create', response['path'])
+        self.assertEqual(['example.com'], response['query']['domain'])
+        self.assertEqual(['https://example.com/'], response['query']['url'])
+        for path, call in (('batch/info', self.client.batch_info), ('crawl/info', self.client.crawl_info)):
+            with self.subTest(path=path):
+                response = call(77)
+                self.assertEqual('/api/v1/' + path, response['path'])
+                self.assertEqual(['77'], response['query']['id'])
+
+    def test_batch_uploads_the_file_as_multipart(self):
+        with TemporaryDirectory() as directory:
+            file = Path(directory, 'urls.csv')
+            file.write_text('https://example.com/\n', encoding='utf-8')
+            response = self.client.batch_create(file, {'instance_id': 12})
+        self.assertEqual('POST', response['method'])
+        self.assertEqual('/api/v1/batch/create', response['path'])
+        self.assertTrue(response['upload_content_type'].startswith('multipart/form-data;'))
+        self.assertTrue(response['upload'])
+        self.assertEqual(['12'], response['query']['instance_id'])
+
+    def test_simple_and_thumbnail_preserve_bytes(self):
+        self.assertEqual({'code': 200, 'png': IMAGE}, self.client.simple('https://example.com/'))
+        self.assertEqual(IMAGE, self.client.screenshot_thumbnail(77))
+        with TemporaryDirectory() as directory:
+            file = Path(directory, 'capture.png')
+            self.assertEqual(file, self.client.screenshot_thumbnail_file(77, file))
+            self.assertEqual(IMAGE, file.read_bytes())
+            self.assertEqual({'code': 200, 'file': file}, self.client.simple_file('https://example.com/', file))
+            self.assertEqual(IMAGE, file.read_bytes())
+
+    def test_html_returns_rendered_bytes(self):
+        self.assertEqual(b'<html>Example</html>', self.client.screenshot_html(77))
+
+    def test_json_endpoints_preserve_api_error_bodies(self):
+        response = self.client.screenshot_info(0, {'stub_status': 400})
+        self.assertEqual({'error': 'INVALID_REQUEST'}, response)
+
+    def test_simple_preserves_error_status_and_empty_result(self):
+        self.assertEqual({'code': 404, 'png': ''}, self.client.simple('https://example.com/', {'stub_status': 404}))
+
+    def test_debug_output_omits_api_key(self):
+        self.client.debug = 1
+        output = StringIO()
+        with redirect_stdout(output):
+            self.client.instance_list()
+        self.assertIn('/api/v1/instance/list', output.getvalue())
+        self.assertNotIn('key', output.getvalue())
 
-    def test_simple(self):
-        data = self.client.simple('http://mobilito.net/', {'cache': 60 * 60 * 24 * 365})
-        #data = self.client.simple({'url': 'http://mobilito.net'})
-        self.assertEquals(200,  data['code'])
-        self.assertEquals(True, len(data['png']) > 0)
 
-        # Fail
-        data = self.client.simple('')
-        self.assertEquals(400,  data['code'])
-        self.assertEquals('',   data['png'])
-
-
-    #def test_simple_file(self):
-        #data = self.client.simple_file('http://mobilito.net/', '/tmp/mobilito.png', {'cache': 60 * 60 * 24 * 365})
-        #self.assertEquals(200,                  data['code'])
-        #self.assertEquals('/tmp/mobilito.png',  data['file'])
-
-
-    def test_instance_list(self):
-        instances = self.client.instance_list()
-
-        self.assertEquals(True, 'free' in instances)
-        self.assertEquals(True, len(instances['free']) > 0)
-
-        self.assertEquals(True, 'shared' in instances)
-        self.assertEquals(True, len(instances['shared']) > 0)
-
-        self.assertEquals(True, 'private' in instances)
-        self.assertEquals(1,    len(instances['private']))
-
-        free = instances['free'][0]
-        self.assertEquals(True, 'id' in free)
-        self.assertEquals(True, 'width' in free)
-        self.assertEquals(True, 'height' in free)
-        self.assertEquals(True, 'load' in free)
-        self.assertEquals(True, 'browser' in free)
-        self.assertEquals(True, 'id' in free['browser'])
-        self.assertEquals(True, 'name' in free['browser'])
-        self.assertEquals(True, 'javascript' in free['browser'])
-        self.assertEquals(True, 'flash' in free['browser'])
-        self.assertEquals(True, 'mobile' in free['browser'])
-        self.assertEquals(True, 'type' in free)
-        self.assertEquals(True, 'screenshot_cost' in free)
-        self.assertEquals(0,    int(free['screenshot_cost']))
-
-
-    def test_instance_info(self):
-        instances = self.client.instance_list()
-        free = instances['free'][0]
-		
-        instance = self.client.instance_info(free['id'])
-        self.assertEquals(free['id'], instance['id'])
-        self.assertEquals(free['width'], instance['width'])
-        self.assertEquals(free['height'], instance['height'])
-        #self.assertEquals(free['load'], instance['load']) # can change
-        self.assertEquals(free['browser']['id'], instance['browser']['id'])
-        self.assertEquals(free['browser']['name'], instance['browser']['name'])
-        self.assertEquals(free['browser']['javascript'], instance['browser']['javascript'])
-        self.assertEquals(free['browser']['flash'], instance['browser']['flash'])
-        self.assertEquals(int(free['browser']['mobile']), int(instance['browser']['mobile']))
-        self.assertEquals(free['type'], instance['type'])
-        self.assertEquals(int(free['screenshot_cost']), int(instance['screenshot_cost']))
-
-
-    def test_instance_info_wrong(self):
-        instance = self.client.instance_info(-1)
-
-        self.assertEquals(True, 'error' in instance)
-        self.assertEquals(True, 'status' in instance)
-
-
-    def test_browser_list(self):
-        browsers = self.client.browser_list()
-        self.assertEquals(True, len(browsers.keys()) > 0)
-
-        browser_id = browsers.keys()[0]
-        self.assertEquals(True, browser_id > 0)
-
-        browser = browsers[browser_id]
-        self.assertEquals(True, 'name' in browser)
-        self.assertEquals(True, 'user_agent' in browser)
-        self.assertEquals(True, 'appname' in browser)
-        self.assertEquals(True, 'vendorsub' in browser)
-        self.assertEquals(True, 'appcodename' in browser)
-        self.assertEquals(True, 'platform' in browser)
-        self.assertEquals(True, 'vendor' in browser)
-        self.assertEquals(True, 'appversion' in browser)
-        self.assertEquals(True, 'javascript' in browser)
-        self.assertEquals(True, 'mobile' in browser)
-        self.assertEquals(True, 'flash' in browser)
-
-
-    def test_screenshot_create_wrong(self):
-        screenshot = self.client.screenshot_create()
-        self.assertEquals(True, 'error' in screenshot)
-
-        screenshot = self.client.screenshot_create('-')
-        self.assertEquals(True, 'error' in screenshot)
-
-
-    def test_screenshot_create(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-
-        self.assertEquals(True, 'id' in screenshot)
-        self.assertEquals(True, 'status' in screenshot)
-        self.assertEquals(True, 'priority' in screenshot)
-
-        if screenshot['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in screenshot)
-            self.assertEquals(True, 'url' in screenshot)
-            self.assertEquals(True, 'size' in screenshot)
-            self.assertEquals(True, 'width' in screenshot)
-            self.assertEquals(True, 'height' in screenshot)
-            self.assertEquals(True, 'request_time' in screenshot)
-            self.assertEquals(True, 'started' in screenshot)
-            self.assertEquals(True, 'load' in screenshot)
-            self.assertEquals(True, 'content' in screenshot)
-            self.assertEquals(True, 'finished' in screenshot)
-            self.assertEquals(True, 'instance_id' in screenshot)
-            self.assertEquals(True, 'response_code' in screenshot)
-            self.assertEquals(True, 'final_url' in screenshot)
-            self.assertEquals(True, 'content_type' in screenshot)
-            self.assertEquals(True, 'scale' in screenshot)
-            self.assertEquals(True, 'cost' in screenshot)
-
-
-    def test_screenshot_info_wrong(self):
-        screenshot = self.client.screenshot_info()
-        self.assertEquals(True, 'error' in screenshot)
-
-
-    def test_screenshot_info(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-        info  = self.client.screenshot_info(screenshot['id'])
-		
-        self.assertEquals(True, 'id' in info)
-        self.assertEquals(True, 'status' in info)
-        self.assertEquals(True, 'priority' in info)
-
-        if info['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in info)
-            self.assertEquals(True, 'url' in info)
-            self.assertEquals(True, 'size' in info)
-            self.assertEquals(True, 'width' in info)
-            self.assertEquals(True, 'height' in info)
-            self.assertEquals(True, 'request_time' in info)
-            self.assertEquals(True, 'started' in info)
-            self.assertEquals(True, 'load' in info)
-            self.assertEquals(True, 'content' in info)
-            self.assertEquals(True, 'finished' in info)
-            self.assertEquals(True, 'instance_id' in info)
-            self.assertEquals(True, 'response_code' in info)
-            self.assertEquals(True, 'final_url' in info)
-            self.assertEquals(True, 'content_type' in info)
-            self.assertEquals(True, 'scale' in info)
-            self.assertEquals(True, 'cost' in info)
-            self.assertEquals(False, 'images' in info)
-            self.assertEquals(False, 'scripts' in info)
-
-    def test_screenshot_info_0(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-        info  = self.client.screenshot_info(screenshot['id'], { 'details' :  0 })
-
-        self.assertEquals(True, 'id' in info)
-        self.assertEquals(True, 'status' in info)
-        self.assertEquals(True, 'priority' in info)
-
-        if info['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in info)
-            self.assertEquals(True, 'url' in info)
-            self.assertEquals(True, 'size' in info)
-            self.assertEquals(True, 'width' in info)
-            self.assertEquals(True, 'height' in info)
-            self.assertEquals(True, 'instance_id' in info)
-            self.assertEquals(True, 'final_url' in info)
-            self.assertEquals(True, 'scale' in info)
-            self.assertEquals(True, 'cost' in info)
-
-            self.assertEquals(False, 'response_code' in info)
-            self.assertEquals(False, 'content_type' in info)
-
-            self.assertEquals(False, 'started' in info)
-            self.assertEquals(False, 'finished' in info)
-            self.assertEquals(False, 'load' in info)
-            self.assertEquals(False, 'request_time' in info)
-            self.assertEquals(False, 'content' in info)
-
-            self.assertEquals(False, 'images' in info)
-            self.assertEquals(False, 'scripts' in info)
-            self.assertEquals(False, 'iframes' in info)
-
-    def test_screenshot_info_1(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-        info  = self.client.screenshot_info(screenshot['id'], { 'details' :  1 })
-
-        self.assertEquals(True, 'id' in info)
-        self.assertEquals(True, 'status' in info)
-        self.assertEquals(True, 'priority' in info)
-
-        if info['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in info)
-            self.assertEquals(True, 'url' in info)
-            self.assertEquals(True, 'size' in info)
-            self.assertEquals(True, 'width' in info)
-            self.assertEquals(True, 'height' in info)
-            self.assertEquals(True, 'instance_id' in info)
-            self.assertEquals(True, 'final_url' in info)
-            self.assertEquals(True, 'scale' in info)
-            self.assertEquals(True, 'cost' in info)
-
-            self.assertEquals(True, 'response_code' in info)
-            self.assertEquals(True, 'content_type' in info)
-
-            self.assertEquals(False, 'started' in info)
-            self.assertEquals(False, 'finished' in info)
-            self.assertEquals(False, 'load' in info)
-            self.assertEquals(False, 'request_time' in info)
-            self.assertEquals(False, 'content' in info)
-
-            self.assertEquals(False, 'images' in info)
-            self.assertEquals(False, 'scripts' in info)
-            self.assertEquals(False, 'iframes' in info)
-
-    def test_screenshot_info_2(self):
-        screenshot = self.client.screenshot_create('http://browshot.com/')
-        info  = self.client.screenshot_info(screenshot['id'], { 'details' :  2 })
-
-        self.assertEquals(True, 'id' in info)
-        self.assertEquals(True, 'status' in info)
-        self.assertEquals(True, 'priority' in info)
-
-        if info['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in info)
-            self.assertEquals(True, 'url' in info)
-            self.assertEquals(True, 'size' in info)
-            self.assertEquals(True, 'width' in info)
-            self.assertEquals(True, 'height' in info)
-            self.assertEquals(True, 'instance_id' in info)
-            self.assertEquals(True, 'final_url' in info)
-            self.assertEquals(True, 'scale' in info)
-            self.assertEquals(True, 'cost' in info)
-
-            self.assertEquals(True, 'response_code' in info)
-            self.assertEquals(True, 'content_type' in info)
-
-            self.assertEquals(True, 'started' in info)
-            self.assertEquals(True, 'finished' in info)
-            self.assertEquals(True, 'load' in info)
-            self.assertEquals(True, 'request_time' in info)
-            self.assertEquals(True, 'content' in info)
-
-            self.assertEquals(False, 'images' in info)
-            self.assertEquals(False, 'scripts' in info)
-            self.assertEquals(False, 'iframes' in info)
-
-    #def test_screenshot_info_3(self):
-        #screenshot = self.client.screenshot_create('http://browshot.com/')
-        #info  = self.client.screenshot_info(screenshot['id'], { 'details' :  3 })
-
-        #self.assertEquals(True, 'id' in info)
-        #self.assertEquals(True, 'status' in info)
-        #self.assertEquals(True, 'priority' in info)
-
-        #if info['status'] == 'finished':
-            #self.assertEquals(True, 'screenshot_url' in info)
-            #self.assertEquals(True, 'url' in info)
-            #self.assertEquals(True, 'size' in info)
-            #self.assertEquals(True, 'width' in info)
-            #self.assertEquals(True, 'height' in info)
-            #self.assertEquals(True, 'instance_id' in info)
-            #self.assertEquals(True, 'final_url' in info)
-            #self.assertEquals(True, 'scale' in info)
-            #self.assertEquals(True, 'cost' in info)
-
-            #self.assertEquals(True, 'response_code' in info)
-            #self.assertEquals(True, 'content_type' in info)
-
-            #self.assertEquals(True, 'started' in info)
-            #self.assertEquals(True, 'finished' in info)
-            #self.assertEquals(True, 'load' in info)
-            #self.assertEquals(True, 'request_time' in info)
-            #self.assertEquals(True, 'content' in info)
-
-            #self.assertEquals(True, 'images' in info)
-            #self.assertEquals(True, 'scripts' in info)
-            #self.assertEquals(True, 'iframes' in info)
-
-
-    def test_screenshot_list(self):
-        screenshots = self.client.screenshot_list()
-        self.assertEquals(True, len(screenshots.keys()) > 0)
-
-        screenshot_id = screenshots.keys()[0]
-        self.assertEquals(True, screenshot_id > 0)
-
-        screenshot = screenshots[screenshot_id]
-		
-        self.assertEquals(True, 'id' in screenshot)
-        self.assertEquals(True, 'status' in screenshot)
-        self.assertEquals(True, 'priority' in screenshot)
-
-        if screenshot['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in screenshot)
-            self.assertEquals(True, 'url' in screenshot)
-            self.assertEquals(True, 'size' in screenshot)
-            self.assertEquals(True, 'width' in screenshot)
-            self.assertEquals(True, 'height' in screenshot)
-            self.assertEquals(True, 'request_time' in screenshot)
-            self.assertEquals(True, 'started' in screenshot)
-            self.assertEquals(True, 'load' in screenshot)
-            self.assertEquals(True, 'content' in screenshot)
-            self.assertEquals(True, 'finished' in screenshot)
-            self.assertEquals(True, 'instance_id' in screenshot)
-            self.assertEquals(True, 'response_code' in screenshot)
-            self.assertEquals(True, 'final_url' in screenshot)
-            self.assertEquals(True, 'content_type' in screenshot)
-            self.assertEquals(True, 'scale' in screenshot)
-            self.assertEquals(True, 'cost' in screenshot)
-
-
-    def test_thumbnail(self):
-        screenshots = self.client.screenshot_list()
-        self.assertEquals(True, len(screenshots.keys()) > 0)
-
-        screenshot_id = screenshots.keys()[0]
-        self.assertEquals(True, screenshot_id > 0)
-
-        thumbnail = self.client.screenshot_thumbnail(screenshot_id)
-        self.assertEquals(True, thumbnail != '')
-        self.assertEquals('PNG', thumbnail[1:4])
-
-
-    def test_screenshot_share(self):
-        share = self.client.screenshot_host(0)
-        self.assertEquals('error', share['status'])
-
-    def test_screenshot_search(self):
-        screenshots = self.client.screenshot_search('google.com')
-        self.assertEquals(True, len(screenshots.keys()) > 0)
-
-        screenshot_id = screenshots.keys()[0]
-        self.assertEquals(True, screenshot_id > 0)
-
-        screenshot = screenshots[screenshot_id]
-		
-        self.assertEquals(True, 'id' in screenshot)
-        self.assertEquals(True, 'status' in screenshot)
-        self.assertEquals(True, 'priority' in screenshot)
-
-        if screenshot['status'] == 'finished':
-            self.assertEquals(True, 'screenshot_url' in screenshot)
-            self.assertEquals(True, 'url' in screenshot)
-            self.assertEquals(True, 'size' in screenshot)
-            self.assertEquals(True, 'width' in screenshot)
-            self.assertEquals(True, 'height' in screenshot)
-            self.assertEquals(True, 'request_time' in screenshot)
-            self.assertEquals(True, 'started' in screenshot)
-            self.assertEquals(True, 'load' in screenshot)
-            self.assertEquals(True, 'content' in screenshot)
-            self.assertEquals(True, 'finished' in screenshot)
-            self.assertEquals(True, 'instance_id' in screenshot)
-            self.assertEquals(True, 'response_code' in screenshot)
-            self.assertEquals(True, 'final_url' in screenshot)
-            self.assertEquals(True, 'content_type' in screenshot)
-            self.assertEquals(True, 'scale' in screenshot)
-            self.assertEquals(True, 'cost' in screenshot)
-
-    def test_hosting(self):
-        screenshots = self.client.screenshot_list()
-        self.assertEquals(True, len(screenshots.keys()) > 0)
-
-        screenshot_id = screenshots.keys()[0]
-        self.assertEquals(True, screenshot_id > 0)
-
-        hosting = self.client.screenshot_host(screenshot_id)
-        self.assertEquals('error', hosting['status'])
-
-        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 'browshot' })
-        self.assertEquals('error', hosting['status'])
-
-        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 's3' })
-        self.assertEquals('error', hosting['status'])
-
-        hosting = self.client.screenshot_host(screenshot_id, { 'hosting' : 's3', 'bucket' : 'mine' })
-        self.assertEquals('error', hosting['status'])
-
-
-    def test_account_info(self):
-        account = self.client.account_info()
-
-        self.assertEquals(True, 'balance' in account)
-        self.assertEquals(0,  int(account['balance']))
-        self.assertEquals(True, 'active' in account)
-        self.assertEquals(1,  int(account['active']))
-        #self.assertEquals(True, 'instances' in account)
-
-    def test_account_info_wrong(self):
-        client = BrowshotClient()
-        #client.debug = True
-        account = client.account_info()
-
-        self.assertEquals(True, 'error' in account)
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

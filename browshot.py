@@ -27,9 +27,11 @@ The library version matches closely the API version it handles: browshot.py 1.0.
 browshot.py can handle most the API updates within the same major version, e.g. browshot.py 1.0.0 should be compatible with the API 1.1 or 1.2. """
 
 
-import urllib
-from urllib2 import Request, urlopen, URLError, HTTPError
-import simplejson
+import json
+from urllib.error import HTTPError
+from urllib.parse import quote_plus
+from urllib.request import urlopen
+
 import requests
 
 
@@ -63,18 +65,15 @@ class BrowshotClient(object):
                 <code>: 200 if successful
                 <content>: PNG file
         """
-        parameters.update({'url': url})
+        parameters = dict(parameters, url=url)
         uri = self.make_url('simple', parameters)
-        if self.debug:
-            print uri
-
         try:
-            response = urlopen(uri)
-
-            return {'code': 200, 'png': response.read()}
-        except HTTPError, e:
-            return {'code': e.code, 'png': ''}
-        except Exception, e:
+            with urlopen(uri) as response:
+                return {'code': 200, 'png': response.read()}
+        except HTTPError as error:
+            with error:
+                return {'code': error.code, 'png': ''}
+        except Exception:
             return {'code': 400, 'png': ''}
 
 
@@ -93,11 +92,10 @@ class BrowshotClient(object):
             url (Required): URL of the screenshot
             file (Required): local file to store the screenshot
          """
-        data = self.simple(url, parameters);
-        if len(data['png']) > 0:
-            image = open(file, mode='wb')
-            image.write(data['png'])
-            image.close();
+        data = self.simple(url, parameters)
+        if data['png']:
+            with open(file, 'wb') as image:
+                image.write(data['png'])
             return {'code': data['code'], 'file': file}
 
         return {'code': data['code'], 'file': ''}
@@ -139,7 +137,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_create for the full list of possible arguments.
                 url(Required): URL of the website to create a screenshot of.
         """
-        parameters.update({'url': url})
+        parameters = dict(parameters, url=url)
         return self.return_reply('screenshot/create', parameters)
 
     def screenshot_info(self, id=0, parameters={}):
@@ -148,7 +146,7 @@ class BrowshotClient(object):
             Arguments:
                 id (Required): Screenshot ID.
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('screenshot/info', parameters)
 
     def screenshot_list(self, parameters={}):
@@ -162,7 +160,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_host for the full list of possible arguments.
                 id (Required): screenshot ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('screenshot/host', parameters)
 
     def screenshot_share(self, id=0, parameters={}):
@@ -172,7 +170,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_share for the full list of possible arguments.
                 id (Required): screenshot ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('screenshot/share', parameters)
 
     def screenshot_search(self, url='', parameters={}):
@@ -182,7 +180,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_search for the full list of possible arguments.
                 url (Required): URL string to match
         """
-        parameters.update({'url': url})
+        parameters = dict(parameters, url=url)
         return self.return_reply('screenshot/search', parameters)
 
     def screenshot_delete(self, id=0, parameters={}):
@@ -192,7 +190,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_delete for the full list of possible arguments.
                 id (Required): screenshot ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('screenshot/delete', parameters)
 
     def screenshot_thumbnail(self, id=0, parameters={}):
@@ -202,10 +200,8 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_thumbnail for the full list of possible arguments.
                 id (Required): screenshot ID. You will get the full image if no other argument is specified.
         """
-        parameters.update({'id': id})
-        url = self.make_url('screenshot/thumbnail', parameters)
-        response = urllib.urlopen(url)
-        return response.read()
+        parameters = dict(parameters, id=id)
+        return self.return_reply_string('screenshot/thumbnail', parameters)
 
     def screenshot_thumbnail_file(self, id=0, file='', parameters={}):
         """ Retrieve the screenshot, or a thumbnail, and save it to a file. See http://browshot.com/api/documentation#screenshot_thumbnail for the response format.
@@ -217,11 +213,9 @@ class BrowshotClient(object):
             id (Required): screenshot ID. You will get the full image if no other argument is specified.
             file (Required): local file to store the screenshot
          """
-        content = self.screenshot_thumbnail(id, parameters);
-
-        image = open(file, mode='wb')
-        image.write(content)
-        image.close();
+        content = self.screenshot_thumbnail(id, parameters)
+        with open(file, 'wb') as image:
+            image.write(content)
 
         return file
 
@@ -232,7 +226,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#screenshot_html for the full list of possible arguments.
                 id (Required): screenshot ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply_string('screenshot/html', parameters)
 
 
@@ -262,7 +256,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#batch_info for the full list of possible arguments.
                 id (Required): batch ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('batch/info', parameters)
 
 
@@ -274,8 +268,7 @@ class BrowshotClient(object):
                 domain (Required): domain to crawl
                 url (Required): URL to start with
         """
-        parameters.update({'url': url})
-        parameters.update({'domain': domain})
+        parameters = dict(parameters, url=url, domain=domain)
         return self.return_reply('crawl/create', parameters)
 
 
@@ -286,7 +279,7 @@ class BrowshotClient(object):
             See https://browshot.com/api/documentation#crawl_info for the full list of possible arguments.
                 id (Required): crawl ID
         """
-        parameters.update({'id': id})
+        parameters = dict(parameters, id=id)
         return self.return_reply('crawl/info', parameters)
 
 
@@ -296,69 +289,49 @@ class BrowshotClient(object):
 
 
     def make_url(self, action='', parameters={}):
-        url = self.base + action + '?key=' + urllib.quote_plus(self.key)
+        url = self.base + action + '?key=' + quote_plus(self.key)
 
         for key, value in parameters.items():
             if key == 'urls':
               for uri in value:
-                url += '&url=' + urllib.quote_plus(str(uri))
+                url += '&url=' + quote_plus(str(uri))
             elif key == 'instances':
               for instance_id in value:
-                url += '&instance_id=' + urllib.quote_plus(str(instance_id))
+                url += '&instance_id=' + quote_plus(str(instance_id))
             else:
-              url += '&' + urllib.quote_plus(key) + '=' + urllib.quote_plus(str(value))
+              url += '&' + quote_plus(key) + '=' + quote_plus(str(value))
 
         if self.debug:
-            print url
+            print(self.base + action)
 
         return url
 
 
     def return_reply(self, action='', parameters={}):
-        content = self.return_reply_string(action, parameters);
-
-        try:
-            json_decode = simplejson.loads(content)
-            return json_decode
-        except Exception, e:
-            raise e
-
+        return json.loads(self.return_reply_string(action, parameters))
 
     def return_reply_string(self, action='', parameters={}):
+        url = self.make_url(action, parameters)
         try:
-            url    = self.make_url(action, parameters)
-
-            response = urllib.urlopen(url)
-            return response.read()
-        except Exception, e:
-            raise e
-
-
+            with urlopen(url) as response:
+                return response.read()
+        except HTTPError as error:
+            # urllib.urlopen on Python 2 returned the response body for these
+            # statuses. Keep Browshot's JSON errors available to callers.
+            with error:
+                return error.read()
 
     def return_post_reply(self, action='', file='', parameters={}):
-        content = self.return_reply_post_string(action, file, parameters);
-
-        try:
-            json_decode = simplejson.loads(content)
-            return json_decode
-        except Exception, e:
-            raise e
-
+        return json.loads(self.return_reply_post_string(action, file, parameters))
 
     def return_reply_post_string(self, action='', file='', parameters={}):
-        try:
-            url = self.make_url(action, parameters)
+        if not file:
+            return self.return_reply_string(action, parameters)
 
-            if file == '':
-              response = urllib.urlopen(url)
-              return response.read()
-
-            else:
-              response = requests.post(url, files={'file': open(file,'rb')})
-              return response.content
-
-        except Exception, e:
-            raise e
+        url = self.make_url(action, parameters)
+        with open(file, 'rb') as upload:
+            with requests.post(url, files={'file': upload}) as response:
+                return response.content
 
 
 if __name__ == "__main__":

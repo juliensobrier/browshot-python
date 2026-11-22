@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+    with open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8') as file:
+        return file.read()
 
-requirements = ['simplejson', 'requests']
+requirements = ['requests']
 
 setup(
     name='Browshot',
-    version='1.21.1',
+    version='1.29.0',
     py_modules=['browshot'],
     description='Client to interact with Browshot',
     long_description=read('README'),
     url='https://github.com/juliensobrier/browshot-python',
-    license='Apache',
+    license='Apache-2.0',
     author='Julien Sobrier',
     author_email='julien@sobrier.net',
     classifiers=[
@@ -24,12 +24,11 @@ setup(
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
     ],
-    packages=find_packages(exclude=('tests')),
-#    namespace_packages=["browshot"],
+    python_requires='>=3.9',
     install_requires=requirements,
-    test_suite = 'tests',
 )
